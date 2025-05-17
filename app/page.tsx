@@ -1,3 +1,5 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Brain } from "lucide-react"
@@ -5,8 +7,23 @@ import Link from "next/link"
 import { FeaturedQuizzes } from "@/components/featured-quizzes"
 import { PopularCategories } from "@/components/popular-categories"
 import { TrendingQuizzes } from "@/components/trending-quizzes"
+import { useEffect } from "react"
+import { sdk } from "@farcaster/frame-sdk"
 
 export default function Home() {
+  useEffect(() => {
+    const initApp = async () => {
+      try {
+        // Hide splash screen when app is ready
+        await sdk.actions.ready()
+      } catch (error) {
+        console.error("Error initializing app:", error)
+      }
+    }
+
+    initApp()
+  }, [])
+
   return (
     <div className="container max-w-md md:max-w-4xl mx-auto px-4 py-4 md:py-8">
       <div className="flex flex-col items-center justify-center text-center mb-6 md:mb-10">

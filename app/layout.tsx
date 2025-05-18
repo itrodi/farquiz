@@ -12,7 +12,28 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "BrainCast - The Ultimate Quiz Experience",
   description: "Test your knowledge and compete with friends on the premier quiz platform",
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  openGraph: {
+    title: "BrainCast - The Ultimate Quiz Experience",
+    description: "Test your knowledge and compete with friends on the premier quiz platform",
+    images: ["https://your-domain.com/og-image.png"],
+  },
+  other: {
+    "fc:frame": JSON.stringify({
+      version: "next",
+      imageUrl: "https://your-domain.com/og-image.png",
+      button: {
+        title: "Start Quiz",
+        action: {
+          type: "launch_frame",
+          url: "https://your-domain.com",
+          name: "BrainCast",
+          splashImageUrl: "https://your-domain.com/splash.png",
+          splashBackgroundColor: "#000000"
+        }
+      }
+    })
+  }
 }
 
 export default function RootLayout({

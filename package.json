@@ -5,16 +5,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build", 
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@farcaster/frame-sdk": "latest",
+<<<<<<< HEAD
     "@farcaster/core": "latest",
     "@farcaster/auth-kit": "latest",
     "@neynar/nodejs-sdk": "latest",
     "viem": "latest",
+=======
+    "@farcaster/frame-wagmi-connector": "latest",
+>>>>>>> 0b4325aafe1e5a6bef651f9f3cd7f8ab9accd7d6
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",

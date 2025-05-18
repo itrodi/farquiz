@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -8,83 +7,45 @@ import Link from "next/link"
 import { FeaturedQuizzes } from "@/components/featured-quizzes"
 import { PopularCategories } from "@/components/popular-categories"
 import { TrendingQuizzes } from "@/components/trending-quizzes"
-import { useEffect, useState, useCallback } from "react"
-import { sdk } from "@farcaster/frame-sdk"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/components/ui/use-toast"
+import { useInitFarcaster } from "@/lib/farcaster-safe"
 
 export default function Home() {
-  const [isInitializing, setIsInitializing] = useState(true)
-  const [authAttempted, setAuthAttempted] = useState(false)
-  const { user, signIn, isLoading, isInFarcaster, isAuthenticated } = useAuth()
-  const { toast } = useToast()
+  const [authAttempted, setAuthAttempted] = useState(false);
+  const { user, signIn, isLoading, isInFarcaster, isAuthenticated } = useAuth();
+  const { isInitialized } = useInitFarcaster();
+  const { toast } = useToast();
 
-  // Initialize app and set up SDK for Farcaster
+  // Handle auto sign-in after initialization
   useEffect(() => {
-    const initApp = async () => {
-      setIsInitializing(true)
-      try {
-        console.log("Initializing Frame SDK...")
-        
-        if (isInFarcaster) {
-          try {
-            // Set up share state provider
-            sdk.setShareStateProvider(() => {
-              return {
-                path: window.location.pathname,
-                params: window.location.search,
-              }
-            })
-          } catch (error) {
-            console.warn("Error setting share state provider:", error)
-          }
-
-          // CRITICAL: Hide splash screen when app is ready
-          try {
-            console.log("Calling actions.ready()...")
-            await sdk.actions.ready()
-            console.log("App ready!")
-          } catch (error) {
-            console.error("Error calling ready():", error)
-          }
-        }
-      } catch (error) {
-        console.error("Error initializing app:", error)
-      } finally {
-        setIsInitializing(false)
-      }
+    if (!isInitialized || isLoading || !isInFarcaster || authAttempted || isAuthenticated) {
+      return;
     }
-
-    initApp()
-  }, [isInFarcaster])
-
-  // Handle auto sign-in
-  const attemptSignIn = useCallback(async () => {
-    if (!isInFarcaster || isLoading || isAuthenticated || authAttempted) return
     
-    try {
-      console.log("Attempting auto sign-in with Farcaster...")
-      setAuthAttempted(true)
-      await signIn("farcaster")
-      toast({
-        title: "Welcome to BrainCast!",
-        description: "You've been signed in with Farcaster."
-      })
-    } catch (error) {
-      console.error("Auto sign-in error:", error)
-      // Don't show error toast as it might be confusing to users
-    }
-  }, [isInFarcaster, isLoading, isAuthenticated, authAttempted, signIn, toast])
+    const attemptSignIn = async () => {
+      try {
+        setAuthAttempted(true);
+        await signIn("farcaster");
+        toast({
+          title: "Welcome to BrainCast!",
+          description: "You've been signed in with Farcaster."
+        });
+      } catch (error) {
+        console.error("Auto sign-in error:", error);
+      }
+    };
+    
+    // Add a small delay to ensure everything is ready
+    const timer = setTimeout(attemptSignIn, 1000);
+    return () => clearTimeout(timer);
+  }, [isInitialized, isLoading, isInFarcaster, authAttempted, isAuthenticated, signIn, toast]);
 
-  useEffect(() => {
-    if (!isInitializing && !isLoading) {
-      const timer = setTimeout(() => {
-        attemptSignIn()
-      }, 1000) // Slight delay to ensure everything is loaded
-      
-      return () => clearTimeout(timer)
-    }
-  }, [isInitializing, isLoading, attemptSignIn])
+  // Simple welcome message
+  const welcomeMessage = user ? 
+    `Welcome${user.displayName ? ', ' + user.displayName : ''}!` : 
+    "Welcome to BrainCast!";
 
   return (
     <div className="container max-w-md md:max-w-4xl mx-auto px-4 py-4 md:py-8">
@@ -95,16 +56,16 @@ export default function Home() {
         <h1 className="text-2xl md:text-4xl font-bold text-white">BrainCast</h1>
         <p className="text-sm md:text-base text-slate-300">The Ultimate Quiz Experience</p>
         
-        {isInitializing && (
+        {(!isInitialized || isLoading) && (
           <div className="flex items-center mt-2 text-sm text-slate-400">
             <Loader2 className="h-3 w-3 animate-spin mr-1" />
-            Initializing...
+            Loading...
           </div>
         )}
         
-        {isInFarcaster && user && (
+        {isInitialized && isInFarcaster && user && (
           <div className="mt-2 text-sm text-green-400">
-            Welcome, {user.displayName || user.username || "User"}!
+            {welcomeMessage}
           </div>
         )}
       </div>
@@ -151,5 +112,5 @@ export default function Home() {
         </section>
       </div>
     </div>
-  )
+  );
 }

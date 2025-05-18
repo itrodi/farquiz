@@ -8,44 +8,33 @@ import { FeaturedQuizzes } from "@/components/featured-quizzes"
 import { PopularCategories } from "@/components/popular-categories"
 import { TrendingQuizzes } from "@/components/trending-quizzes"
 import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/components/ui/use-toast"
-import { useInitFarcaster } from "@/lib/farcaster-safe"
+import { useMinimalFarcasterInit, minimalSignIn } from "@/lib/minimal-farcaster"
 
 export default function Home() {
-  const [authAttempted, setAuthAttempted] = useState(false);
-  const { user, signIn, isLoading, isInFarcaster, isAuthenticated } = useAuth();
-  const { isInitialized } = useInitFarcaster();
-  const { toast } = useToast();
+  const { isInitializing, isInFarcaster, isReady } = useMinimalFarcasterInit();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [signInAttempted, setSignInAttempted] = useState(false);
 
-  // Handle auto sign-in after initialization
+  // Simple sign-in attempt
   useEffect(() => {
-    if (!isInitialized || isLoading || !isInFarcaster || authAttempted || isAuthenticated) {
-      return;
+    if (isReady && isInFarcaster && !signInAttempted && !isSigningIn) {
+      const attemptSignIn = async () => {
+        setIsSigningIn(true);
+        setSignInAttempted(true);
+        try {
+          await minimalSignIn();
+        } catch (error) {
+          console.error("Sign-in error:", error);
+        } finally {
+          setIsSigningIn(false);
+        }
+      };
+      
+      // Add a delay to ensure everything is ready
+      const timer = setTimeout(attemptSignIn, 1000);
+      return () => clearTimeout(timer);
     }
-    
-    const attemptSignIn = async () => {
-      try {
-        setAuthAttempted(true);
-        await signIn("farcaster");
-        toast({
-          title: "Welcome to BrainCast!",
-          description: "You've been signed in with Farcaster."
-        });
-      } catch (error) {
-        console.error("Auto sign-in error:", error);
-      }
-    };
-    
-    // Add a small delay to ensure everything is ready
-    const timer = setTimeout(attemptSignIn, 1000);
-    return () => clearTimeout(timer);
-  }, [isInitialized, isLoading, isInFarcaster, authAttempted, isAuthenticated, signIn, toast]);
-
-  // Simple welcome message
-  const welcomeMessage = user ? 
-    `Welcome${user.displayName ? ', ' + user.displayName : ''}!` : 
-    "Welcome to BrainCast!";
+  }, [isReady, isInFarcaster, signInAttempted, isSigningIn]);
 
   return (
     <div className="container max-w-md md:max-w-4xl mx-auto px-4 py-4 md:py-8">
@@ -56,16 +45,16 @@ export default function Home() {
         <h1 className="text-2xl md:text-4xl font-bold text-white">BrainCast</h1>
         <p className="text-sm md:text-base text-slate-300">The Ultimate Quiz Experience</p>
         
-        {(!isInitialized || isLoading) && (
+        {(isInitializing || isSigningIn) && (
           <div className="flex items-center mt-2 text-sm text-slate-400">
             <Loader2 className="h-3 w-3 animate-spin mr-1" />
-            Loading...
+            {isInitializing ? "Initializing..." : "Signing in..."}
           </div>
         )}
         
-        {isInitialized && isInFarcaster && user && (
+        {isInFarcaster && isReady && !isInitializing && !isSigningIn && (
           <div className="mt-2 text-sm text-green-400">
-            {welcomeMessage}
+            Welcome to BrainCast!
           </div>
         )}
       </div>

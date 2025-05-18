@@ -1,86 +1,38 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { signInWithFarcaster, useFarcasterStatus } from "@/lib/farcaster-safe"
+import { createContext, useContext, useState } from "react"
 
-type AuthContextType = {
-  user: any | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  isInFarcaster: boolean
-  signIn: (provider: "farcaster") => Promise<void>
-  signOut: () => Promise<void>
+// Create an empty context - we won't actually use it for data in this minimal version
+type MinimalAuthContextType = {
+  isInitialized: boolean
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  isInFarcaster: false,
-  signIn: async () => {},
-  signOut: async () => {},
+const MinimalAuthContext = createContext<MinimalAuthContextType>({
+  isInitialized: false
 });
 
+// Minimal auth provider that doesn't do much
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { isInFarcaster, isChecking } = useFarcasterStatus();
-  const router = useRouter();
+  const [isInitialized] = useState(true);
 
-  const signIn = async (provider: "farcaster") => {
-    if (isLoading || !isInFarcaster) return;
-    
-    try {
-      setIsLoading(true);
-
-      if (provider === "farcaster") {
-        const result = await signInWithFarcaster();
-        
-        if (!result) {
-          throw new Error("Failed to sign in with Farcaster");
-        }
-        
-        setUser(result.user);
-        return;
-      }
-
-      throw new Error(`Unsupported provider: ${provider}`);
-    } catch (error) {
-      console.error("Error signing in:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      setUser(null);
-      router.push("/");
-    } catch (error) {
-      console.error("Error signing out:", error);
-      throw error;
-    }
-  };
-
-  const value = {
-    user,
-    isAuthenticated: !!user && !!user.authenticated,
-    isLoading: isLoading || isChecking,
-    isInFarcaster,
-    signIn,
-    signOut
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <MinimalAuthContext.Provider value={{ isInitialized }}>
+      {children}
+    </MinimalAuthContext.Provider>
+  );
 }
 
+// Export a minimal useAuth hook that returns some defaults
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  const context = useContext(MinimalAuthContext);
+  
+  // Return a minimal context with dummy values
+  return {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isInFarcaster: false,
+    signIn: async () => {},
+    signOut: async () => {}
+  };
 };

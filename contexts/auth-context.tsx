@@ -1,38 +1,78 @@
 "use client"
 
-import { createContext, useContext, useState } from "react"
+import type React from "react"
+import { createContext, useContext, useState, useEffect } from "react"
+import { useFarcasterAuth, type FarcasterUser } from "@/lib/improved-farcaster-auth"
 
-// Create an empty context - we won't actually use it for data in this minimal version
-type MinimalAuthContextType = {
-  isInitialized: boolean
+type AuthContextType = {
+  user: FarcasterUser | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  isInFarcaster: boolean
+  signIn: () => Promise<boolean>
+  signOut: () => void
 }
 
-const MinimalAuthContext = createContext<MinimalAuthContextType>({
-  isInitialized: false
+// Create the context
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  isInFarcaster: false,
+  signIn: async () => false,
+  signOut: () => {},
 });
 
-// Minimal auth provider that doesn't do much
+// Auth provider component
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isInitialized] = useState(true);
+  const {
+    isInitializing,
+    isInFarcaster,
+    user,
+    signIn,
+    signOut,
+    isAuthenticated
+  } = useFarcasterAuth();
 
-  return (
-    <MinimalAuthContext.Provider value={{ isInitialized }}>
-      {children}
-    </MinimalAuthContext.Provider>
-  );
+  const [autoSignInAttempted, setAutoSignInAttempted] = useState(false);
+
+  // Try auto sign-in once
+  useEffect(() => {
+    if (isInFarcaster && !isInitializing && !isAuthenticated && !autoSignInAttempted) {
+      const attemptSignIn = async () => {
+        try {
+          await signIn();
+        } catch (error) {
+          console.error("Auto sign-in error:", error);
+        } finally {
+          setAutoSignInAttempted(true);
+        }
+      };
+      
+      // Add a delay to ensure everything is ready
+      const timer = setTimeout(attemptSignIn, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isInFarcaster, isInitializing, isAuthenticated, autoSignInAttempted, signIn]);
+
+  // Context value
+  const value = {
+    user,
+    isAuthenticated,
+    isLoading: isInitializing,
+    isInFarcaster,
+    signIn,
+    signOut
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// Export a minimal useAuth hook that returns some defaults
+// Hook to use auth context
 export const useAuth = () => {
-  const context = useContext(MinimalAuthContext);
-  
-  // Return a minimal context with dummy values
-  return {
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    isInFarcaster: false,
-    signIn: async () => {},
-    signOut: async () => {}
-  };
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 };

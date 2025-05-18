@@ -3,8 +3,6 @@
 import { Brain } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
-import { useState, useEffect } from 'react'
-import { sdk } from "@farcaster/frame-sdk"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -17,31 +15,23 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function Header() {
-  // Safely use auth context
-  const auth = useAuth()
-  const [isInMiniApp, setIsInMiniApp] = useState(false)
-  
-  useEffect(() => {
-    // Check if we're in a Farcaster mini app
-    const checkMiniApp = async () => {
-      try {
-        const result = await sdk.isInMiniApp()
-        setIsInMiniApp(result)
-      } catch (error) {
-        console.error("Error checking mini app status:", error)
-        setIsInMiniApp(false)
-      }
-    }
-    
-    checkMiniApp()
-  }, [])
+  // Use our improved auth context
+  const { user, isAuthenticated, isLoading, isInFarcaster, signIn, signOut } = useAuth()
   
   const handleSignIn = async () => {
-    try {
-      await auth.signIn("farcaster")
-    } catch (error) {
-      console.error("Error signing in:", error)
+    if (isInFarcaster) {
+      try {
+        await signIn()
+      } catch (error) {
+        console.error("Error signing in:", error)
+      }
     }
+  }
+
+  // Safely get first character for avatar fallback
+  const getFirstChar = (str: string | null) => {
+    if (!str) return "U"
+    return str.charAt(0) || "U"
   }
 
   return (
@@ -65,7 +55,7 @@ export function Header() {
             Social
           </Link>
           
-          {auth && isInMiniApp && !auth.isLoading && !auth.user && (
+          {isInFarcaster && !isLoading && !isAuthenticated && (
             <Button 
               onClick={handleSignIn} 
               size="sm"
@@ -80,36 +70,36 @@ export function Header() {
             </Button>
           )}
           
-          {auth && auth.user && auth.profile && (
+          {isAuthenticated && user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={auth.profile.avatar_url} alt={auth.profile.display_name || auth.profile.username} />
+                    <AvatarImage src={user.pfpUrl || undefined} alt={user.displayName || user.username || "User"} />
                     <AvatarFallback>
-                      {auth.profile.display_name?.charAt(0) || auth.profile.username?.charAt(0) || "U"}
+                      {getFirstChar(user.displayName || user.username)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>
-                  <p className="font-medium">{auth.profile.display_name || auth.profile.username}</p>
-                  {auth.profile.username && <p className="text-xs text-slate-400">@{auth.profile.username}</p>}
+                  <p className="font-medium">{user.displayName || user.username || "User"}</p>
+                  {user.username && <p className="text-xs text-slate-400">@{user.username}</p>}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link className="cursor-pointer" href="/profile">My Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => auth.signOut()} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer">
                   Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
           
-          {!isInMiniApp && (
+          {!isInFarcaster && (
             <Link href="https://warpcast.com" target="_blank">
               <Button size="sm" variant="outline" className="text-sm font-medium">
                 <svg width="16" height="16" viewBox="0 0 250 250" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1">
@@ -121,7 +111,7 @@ export function Header() {
             </Link>
           )}
           
-          {auth && auth.isLoading && (
+          {isLoading && (
             <div className="h-8 w-8 rounded-full bg-slate-700 animate-pulse"></div>
           )}
           

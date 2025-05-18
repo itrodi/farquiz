@@ -7,35 +7,11 @@ import Link from "next/link"
 import { FeaturedQuizzes } from "@/components/featured-quizzes"
 import { PopularCategories } from "@/components/popular-categories"
 import { TrendingQuizzes } from "@/components/trending-quizzes"
-import { useState, useEffect } from "react"
-import { useMinimalFarcasterInit, minimalSignIn } from "@/lib/minimal-farcaster"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function Home() {
-  const { isInitializing, isInFarcaster, isReady } = useMinimalFarcasterInit();
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [signInAttempted, setSignInAttempted] = useState(false);
-
-  // Simple sign-in attempt
-  useEffect(() => {
-    if (isReady && isInFarcaster && !signInAttempted && !isSigningIn) {
-      const attemptSignIn = async () => {
-        setIsSigningIn(true);
-        setSignInAttempted(true);
-        try {
-          await minimalSignIn();
-        } catch (error) {
-          console.error("Sign-in error:", error);
-        } finally {
-          setIsSigningIn(false);
-        }
-      };
-      
-      // Add a delay to ensure everything is ready
-      const timer = setTimeout(attemptSignIn, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isReady, isInFarcaster, signInAttempted, isSigningIn]);
-
+  const { user, isLoading, isAuthenticated, isInFarcaster } = useAuth();
+  
   return (
     <div className="container max-w-md md:max-w-4xl mx-auto px-4 py-4 md:py-8">
       <div className="flex flex-col items-center justify-center text-center mb-6 md:mb-10">
@@ -45,16 +21,16 @@ export default function Home() {
         <h1 className="text-2xl md:text-4xl font-bold text-white">BrainCast</h1>
         <p className="text-sm md:text-base text-slate-300">The Ultimate Quiz Experience</p>
         
-        {(isInitializing || isSigningIn) && (
+        {isLoading && (
           <div className="flex items-center mt-2 text-sm text-slate-400">
             <Loader2 className="h-3 w-3 animate-spin mr-1" />
-            {isInitializing ? "Initializing..." : "Signing in..."}
+            Loading...
           </div>
         )}
         
-        {isInFarcaster && isReady && !isInitializing && !isSigningIn && (
+        {isAuthenticated && user && (
           <div className="mt-2 text-sm text-green-400">
-            Welcome to BrainCast!
+            Welcome, {user.displayName || user.username || "Quizzer"}!
           </div>
         )}
       </div>

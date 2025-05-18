@@ -2,142 +2,128 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import type { User, Session } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
-import { signInWithFarcaster } from "@/lib/farcaster"
+import { signInWithFarcaster, checkFarcasterEnvironment, getFarcasterUserContext } from "@/lib/farcaster"
 
 type AuthContextType = {
-  user: User | null
+  user: any | null
   profile: any | null
-  session: Session | null
+  isAuthenticated: boolean
   isLoading: boolean
+  isInFarcaster: boolean
   signIn: (provider: "farcaster") => Promise<void>
   signOut: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  profile: null,
+  isAuthenticated: false,
+  isLoading: true,
+  isInFarcaster: false,
+  signIn: async () => {},
+  signOut: async () => {},
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<any | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
-  const supabase = createClient()
+  const [user, setUser] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInFarcaster, setIsInFarcaster] = useState(false);
+  const router = useRouter();
 
+  // On initial load, check if in Farcaster environment
   useEffect(() => {
-    const getSession = async () => {
-      setIsLoading(true)
+    const initAuth = async () => {
+      setIsLoading(true);
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setSession(session)
-        setUser(session?.user ?? null)
+        // Check if we're in a Farcaster environment
+        const isFarcaster = await checkFarcasterEnvironment();
+        setIsInFarcaster(isFarcaster);
         
-        if (session?.user) {
-          // Load user profile from Supabase
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-            
-          setProfile(userProfile)
+        // If in Farcaster, try to get user context
+        if (isFarcaster) {
+          const context = getFarcasterUserContext();
+          if (context && context.fid) {
+            // Just create a simplified user object
+            setUser({
+              fid: context.fid,
+              username: context.username || `user_${context.fid}`,
+              displayName: context.displayName || `User ${context.fid}`,
+              pfpUrl: context.pfpUrl || null,
+              authenticated: false // Not fully authenticated until signIn is called
+            });
+          }
         }
       } catch (error) {
-        console.error("Error getting session:", error)
+        console.error("Auth initialization error:", error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    getSession()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        // Load user profile from Supabase
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          
-        setProfile(userProfile)
-      } else {
-        setProfile(null)
-      }
-      
-      router.refresh()
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase, router])
+    initAuth();
+  }, []);
 
   const signIn = async (provider: "farcaster") => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
 
       if (provider === "farcaster") {
-        const result = await signInWithFarcaster()
-        
-        if (!result) {
-          throw new Error("Failed to sign in with Farcaster")
+        if (!isInFarcaster) {
+          throw new Error("Not in a Farcaster environment");
         }
         
-        // Refresh the session
-        const { data: { session: newSession } } = await supabase.auth.getSession()
-        setSession(newSession)
-        setUser(newSession?.user ?? null)
+        const result = await signInWithFarcaster();
         
-        // Set the profile
-        setProfile(result.user)
+        if (!result) {
+          throw new Error("Failed to sign in with Farcaster");
+        }
         
-        return
+        setUser(result.user);
+        return;
       }
 
-      throw new Error(`Unsupported provider: ${provider}`)
+      throw new Error(`Unsupported provider: ${provider}`);
     } catch (error) {
-      console.error("Error signing in:", error)
-      throw error
+      console.error("Error signing in:", error);
+      throw error;
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
-      setUser(null)
-      setProfile(null)
-      setSession(null)
-      router.push("/")
+      // Just reset state, don't try to persist
+      setUser(null);
+      
+      // In a real app, you'd need to handle this differently
+      // as there's no real "sign out" from Farcaster in a mini app
+      
+      router.push("/");
     } catch (error) {
-      console.error("Error signing out:", error)
-      throw error
+      console.error("Error signing out:", error);
+      throw error;
     }
-  }
+  };
 
   const value = {
     user,
-    profile,
-    session,
+    profile: user, // Use the same object for both user and profile for simplicity
+    isAuthenticated: !!user && (user.session?.authenticated || false),
     isLoading,
+    isInFarcaster,
     signIn,
-    signOut,
-  }
+    signOut
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
-}
+  return context;
+};

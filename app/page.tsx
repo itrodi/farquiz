@@ -1,3 +1,4 @@
+// app/page.tsx
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -13,37 +14,39 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/components/ui/use-toast"
 
 export default function Home() {
-  const [isInMiniApp, setIsInMiniApp] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
   const [authAttempted, setAuthAttempted] = useState(false)
-  const { user, signIn, isLoading } = useAuth()
+  const { user, signIn, isLoading, isInFarcaster, isAuthenticated } = useAuth()
   const { toast } = useToast()
 
-  // Initialize app and detect environment
+  // Initialize app and set up SDK for Farcaster
   useEffect(() => {
     const initApp = async () => {
       setIsInitializing(true)
       try {
         console.log("Initializing Frame SDK...")
         
-        // Check if we're in a Farcaster mini app
-        const isMiniApp = await sdk.isInMiniApp()
-        console.log("Is in mini app:", isMiniApp)
-        setIsInMiniApp(isMiniApp)
-
-        if (isMiniApp) {
-          // Set up share state provider
-          sdk.setShareStateProvider(() => {
-            return {
-              path: window.location.pathname,
-              params: window.location.search,
-            }
-          })
+        if (isInFarcaster) {
+          try {
+            // Set up share state provider
+            sdk.setShareStateProvider(() => {
+              return {
+                path: window.location.pathname,
+                params: window.location.search,
+              }
+            })
+          } catch (error) {
+            console.warn("Error setting share state provider:", error)
+          }
 
           // CRITICAL: Hide splash screen when app is ready
-          console.log("Calling actions.ready()...")
-          await sdk.actions.ready()
-          console.log("App ready!")
+          try {
+            console.log("Calling actions.ready()...")
+            await sdk.actions.ready()
+            console.log("App ready!")
+          } catch (error) {
+            console.error("Error calling ready():", error)
+          }
         }
       } catch (error) {
         console.error("Error initializing app:", error)
@@ -53,11 +56,11 @@ export default function Home() {
     }
 
     initApp()
-  }, [])
+  }, [isInFarcaster])
 
-  // Separate effect for authentication to avoid infinite loops
+  // Handle auto sign-in
   const attemptSignIn = useCallback(async () => {
-    if (!isInMiniApp || isLoading || user || authAttempted) return
+    if (!isInFarcaster || isLoading || isAuthenticated || authAttempted) return
     
     try {
       console.log("Attempting auto sign-in with Farcaster...")
@@ -65,18 +68,23 @@ export default function Home() {
       await signIn("farcaster")
       toast({
         title: "Welcome to BrainCast!",
-        description: "You've been automatically signed in with Farcaster."
+        description: "You've been signed in with Farcaster."
       })
     } catch (error) {
       console.error("Auto sign-in error:", error)
+      // Don't show error toast as it might be confusing to users
     }
-  }, [isInMiniApp, isLoading, user, authAttempted, signIn, toast])
+  }, [isInFarcaster, isLoading, isAuthenticated, authAttempted, signIn, toast])
 
   useEffect(() => {
-    if (!isInitializing) {
-      attemptSignIn()
+    if (!isInitializing && !isLoading) {
+      const timer = setTimeout(() => {
+        attemptSignIn()
+      }, 1000) // Slight delay to ensure everything is loaded
+      
+      return () => clearTimeout(timer)
     }
-  }, [isInitializing, attemptSignIn])
+  }, [isInitializing, isLoading, attemptSignIn])
 
   return (
     <div className="container max-w-md md:max-w-4xl mx-auto px-4 py-4 md:py-8">
@@ -87,10 +95,16 @@ export default function Home() {
         <h1 className="text-2xl md:text-4xl font-bold text-white">BrainCast</h1>
         <p className="text-sm md:text-base text-slate-300">The Ultimate Quiz Experience</p>
         
-        {isInitializing && isInMiniApp && (
+        {isInitializing && (
           <div className="flex items-center mt-2 text-sm text-slate-400">
             <Loader2 className="h-3 w-3 animate-spin mr-1" />
             Initializing...
+          </div>
+        )}
+        
+        {isInFarcaster && user && (
+          <div className="mt-2 text-sm text-green-400">
+            Welcome, {user.displayName || user.username || "User"}!
           </div>
         )}
       </div>

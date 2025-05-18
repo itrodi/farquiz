@@ -1,0 +1,15 @@
+{
+  "frame": {
+    "version": "1",
+    "name": "FarQuiz",
+    "iconUrl": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/RBv8coHVCER8/farquiz-icon-clean-mbjls7sTnprmFQyScMfpj4OeR18Un3.png?NznO",
+    "homeUrl": "https://your-domain.com",
+    "imageUrl": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/RBv8coHVCER8/farquiz-og-image-gATeER06XIVZOcb9C6ofEnunCbyop2.png?SgXi",
+    "buttonTitle": "Start Quiz",
+    "splashImageUrl": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/RBv8coHVCER8/farquiz-splash-image-Kls8WIXk9wQGcSNkuOOtrxfldtCwqg.png?wKcv",
+    "splashBackgroundColor": "#000000",
+    "description": "Test your knowledge and compete with friends on the premier quiz platform",
+    "tags": ["quiz", "education", "games", "social"],
+    "primaryCategory": "education"
+  }
+}

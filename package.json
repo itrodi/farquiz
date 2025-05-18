@@ -1,5 +1,6 @@
 {
-  "name": "my-v0-project",
+
+  "name": "farcaster-quiz-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,6 +11,10 @@
   },
   "dependencies": {
     "@farcaster/frame-sdk": "latest",
+    "@farcaster/core": "latest",
+    "@farcaster/auth-kit": "latest",
+    "@neynar/nodejs-sdk": "latest",
+    "viem": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",

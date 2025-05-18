@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { User, Session } from "@supabase/supabase-js"
@@ -10,6 +9,7 @@ import { signInWithFarcaster } from "@/lib/farcaster"
 
 type AuthContextType = {
   user: User | null
+  profile: any | null
   session: Session | null
   isLoading: boolean
   signIn: (provider: "farcaster") => Promise<void>
@@ -20,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<any | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -29,15 +30,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getSession = async () => {
       setIsLoading(true)
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession()
-        if (error) {
-          throw error
-        }
+        const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
         setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          // Load user profile from Supabase
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+            
+          setProfile(userProfile)
+        }
       } catch (error) {
         console.error("Error getting session:", error)
       } finally {
@@ -47,11 +53,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     getSession()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        // Load user profile from Supabase
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          
+        setProfile(userProfile)
+      } else {
+        setProfile(null)
+      }
+      
       router.refresh()
     })
 
@@ -65,17 +83,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true)
 
       if (provider === "farcaster") {
-        // Use our enhanced signInWithFarcaster function
         const result = await signInWithFarcaster()
-
+        
         if (!result) {
           throw new Error("Failed to sign in with Farcaster")
         }
-
-        // The session should be automatically set by the Supabase client
-        // after the API route sets the cookies
-
-        router.push("/")
+        
+        // Refresh the session
+        const { data: { session: newSession } } = await supabase.auth.getSession()
+        setSession(newSession)
+        setUser(newSession?.user ?? null)
+        
+        // Set the profile
+        setProfile(result.user)
+        
         return
       }
 
@@ -91,6 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut()
+      setUser(null)
+      setProfile(null)
+      setSession(null)
       router.push("/")
     } catch (error) {
       console.error("Error signing out:", error)
@@ -100,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
+    profile,
     session,
     isLoading,
     signIn,

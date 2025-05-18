@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trophy, Clock, ArrowRight, Share2, Check, X } from "lucide-react"
+import { Trophy, Clock, ArrowRight, Share2, Check, X, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import { sdk } from "@farcaster/frame-sdk"
+import { useToast } from "@/components/ui/use-toast"
 
 interface QuizResultsProps {
   score: number
@@ -32,11 +34,29 @@ export function QuizResults({
 }: QuizResultsProps) {
   const [leaderboardPosition, setLeaderboardPosition] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSharing, setIsSharing] = useState(false)
+  const [isInMiniApp, setIsInMiniApp] = useState(false)
   const supabase = createClient()
+  const { toast } = useToast()
 
   const percentage = Math.round((score / totalQuestions) * 100)
   const minutes = Math.floor(timeTaken / 60)
   const seconds = timeTaken % 60
+
+  useEffect(() => {
+    // Check if we're in a Farcaster mini app
+    const checkMiniApp = async () => {
+      try {
+        const result = await sdk.isInMiniApp()
+        setIsInMiniApp(result)
+      } catch (error) {
+        console.error("Error checking mini app status:", error)
+        setIsInMiniApp(false)
+      }
+    }
+    
+    checkMiniApp()
+  }, [])
 
   useEffect(() => {
     async function checkLeaderboard() {
@@ -71,21 +91,61 @@ export function QuizResults({
     return "Nice try! Study up and try again!"
   }
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `My ${quizTitle} Quiz Result`,
-        text: `I scored ${score}/${totalQuestions} (${percentage}%) on the ${quizTitle} quiz!`,
-        url: window.location.href,
-      })
+  const handleShare = async () => {
+    // If in Farcaster mini app, use the Frame SDK to share
+    if (isInMiniApp) {
+      await handleFarcasterShare()
     } else {
-      // Fallback for browsers that don't support the Web Share API
-      navigator.clipboard.writeText(
-        `I scored ${score}/${totalQuestions} (${percentage}%) on the ${quizTitle} quiz! Try it yourself: ${window.location.href}`,
-      )
-      alert("Result copied to clipboard!")
+      // Otherwise use the web share API or clipboard fallback
+      if (navigator.share) {
+        navigator.share({
+          title: `My ${quizTitle} Quiz Result`,
+          text: `I scored ${score}/${totalQuestions} (${percentage}%) on the ${quizTitle} quiz!`,
+          url: window.location.href,
+        })
+      } else {
+        // Fallback for browsers that don't support the Web Share API
+        navigator.clipboard.writeText(
+          `I scored ${score}/${totalQuestions} (${percentage}%) on the ${quizTitle} quiz! Try it yourself: ${window.location.href}`,
+        )
+        toast({
+          title: "Copied to clipboard",
+          description: "Your result has been copied to the clipboard!",
+        })
+      }
     }
   }
+
+  const handleFarcasterShare = async () => {
+    setIsSharing(true)
+    try {
+      // Format the share text
+      const shareText = `I scored ${score}/${totalQuestions} (${percentage}%) on the "${quizTitle}" quiz on BrainCast! Think you can beat my score?`;
+      
+      // Define the embed URL - this should be the quiz preview page that includes Frame metadata
+      const embedUrl = `${window.location.origin}/quiz/preview/${quizId}`;
+      
+      // Use Farcaster SDK to compose a cast
+      await sdk.actions.composeCast({
+        text: shareText,
+        embeds: [embedUrl],
+      });
+      
+      toast({
+        title: "Shared successfully!",
+        description: "Your quiz result has been shared to Farcaster",
+      });
+    } catch (error) {
+      console.error("Error sharing to Farcaster:", error);
+      toast({
+        title: "Share failed",
+        description: "There was an error sharing your result to Farcaster",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -187,9 +247,23 @@ export function QuizResults({
       </Card>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <Button variant="outline" className="flex-1" onClick={handleShare}>
-          <Share2 className="mr-2 h-4 w-4" />
-          Share Result
+        <Button 
+          variant="outline" 
+          className="flex-1" 
+          onClick={handleShare}
+          disabled={isSharing}
+        >
+          {isSharing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Sharing...
+            </>
+          ) : (
+            <>
+              <Share2 className="mr-2 h-4 w-4" />
+              {isInMiniApp ? "Share to Farcaster" : "Share Result"}
+            </>
+          )}
         </Button>
         <Button asChild className="flex-1">
           <Link href="/explore">

@@ -1,5 +1,9 @@
+// app/api/quizzes/[id]/route.ts
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+
+// Add caching to improve performance
+export const revalidate = 60 // Revalidate every minute
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -32,12 +36,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       throw questionsError
     }
 
-    // Increment the play count
-    await supabase
-      .from("quizzes")
-      .update({ plays: quiz.plays + 1 })
-      .eq("id", id)
-
+    // Return the quiz with its questions
     return NextResponse.json({ ...quiz, questions })
   } catch (error) {
     console.error("Error fetching quiz:", error)

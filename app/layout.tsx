@@ -5,9 +5,11 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
+import { AuthProvider } from "@/contexts/auth-context" // Make sure this import is here
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
+
 
 export const metadata: Metadata = {
   title: "BrainCast - The Ultimate Quiz Experience",
@@ -48,10 +50,12 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} bg-slate-900 text-white`}>
         <ThemeProvider attribute="class" defaultTheme="dark">
-          <Header />
-          <main className="pb-16 md:pb-0">{children}</main>
-          <MobileNav />
-          <Toaster />
+          <AuthProvider>
+            <Header />
+            <main className="pb-16 md:pb-0">{children}</main>
+            <MobileNav />
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,23 +1,24 @@
+// app/api/auth/farcaster/route.ts
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
+  console.log("API: Handling Farcaster auth request");
   const supabase = createClient();
   
   try {
-    const { signature, message, fid, username, displayName, pfpUrl } = await request.json();
-    
-    // Verify the signature (in a production app)
-    // This would use @farcaster/core to verify the signature
+    const { fid, username, displayName, pfpUrl, signature, message } = await request.json();
+    console.log("API: Got auth request for FID:", fid);
     
     // Check if the user exists in our database
-    let { data: user } = await supabase
+    let { data: user, error: userError } = await supabase
       .from('profiles')
       .select('*')
       .eq('fid', fid)
       .single();
       
-    if (!user) {
+    if (userError) {
+      console.log("API: User not found, creating new user");
       // Create new user if they don't exist
       const { data: newUser, error } = await supabase
         .from('profiles')
@@ -35,16 +36,27 @@ export async function POST(request: Request) {
         .select()
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error("API: Error creating new user:", error);
+        throw error;
+      }
       user = newUser;
     }
     
+    console.log("API: User found/created, signing in");
+    
     // Create a session for the user
-    const { data: session, error } = await supabase.auth.signInWithCustomToken({
+    // For simplicity in demo, we're not verifying the signature
+    const { data: session, error: sessionError } = await supabase.auth.signInWithCustomToken({
       token: signature, // Use the signature as a token
     });
     
-    if (error) throw error;
+    if (sessionError) {
+      console.error("API: Session creation error:", sessionError);
+      throw sessionError;
+    }
+    
+    console.log("API: Authentication successful");
     
     return NextResponse.json({ 
       success: true, 
@@ -52,7 +64,7 @@ export async function POST(request: Request) {
       session
     });
   } catch (error) {
-    console.error("Authentication error:", error);
+    console.error("API: Authentication error:", error);
     return NextResponse.json({ 
       success: false, 
       error: "Authentication failed" 

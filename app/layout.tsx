@@ -9,29 +9,36 @@ import { AuthProvider } from "@/contexts/auth-context" // Make sure this import 
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
+// At the top of your layout file, add this for debugging:
+if (typeof window !== 'undefined') {
+  console.log("---- BrainCast Debug Info ----");
+  console.log("App Version: 1.0.0");
+  console.log("URL:", window.location.href);
+  console.log("User Agent:", navigator.userAgent);
+  console.log("------------------------------");
+}
 
 
 export const metadata: Metadata = {
   title: "BrainCast - The Ultimate Quiz Experience",
   description: "Test your knowledge and compete with friends on the premier quiz platform",
-  generator: 'v0.dev',
   openGraph: {
     title: "BrainCast - The Ultimate Quiz Experience",
     description: "Test your knowledge and compete with friends on the premier quiz platform",
-    images: ["https://your-domain.com/og-image.png"],
+    images: [`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/og-image.png`],
   },
   other: {
     "fc:frame": JSON.stringify({
       version: "next",
-      imageUrl: "https://your-domain.com/og-image.png",
+      imageUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/og-image.png`,
       button: {
-        title: "Start Quiz",
+        title: "Start Quizzing",
         action: {
           type: "launch_frame",
-          url: "https://your-domain.com",
           name: "BrainCast",
-          splashImageUrl: "https://your-domain.com/splash.png",
-          splashBackgroundColor: "#000000"
+          url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}`,
+          splashImageUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`,
+          splashBackgroundColor: "#1e293b"
         }
       }
     })

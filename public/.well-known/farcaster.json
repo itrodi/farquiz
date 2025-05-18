@@ -1,4 +1,9 @@
 {
+  "accountAssociation": {
+    "header": "GENERATED_HEADER_FOR_YOUR_DOMAIN",
+    "payload": "GENERATED_PAYLOAD_FOR_YOUR_DOMAIN",
+    "signature": "GENERATED_SIGNATURE_FOR_YOUR_DOMAIN"
+  },
   "frame": {
     "version": "1",
     "name": "FarQuiz",
@@ -7,9 +12,21 @@
     "imageUrl": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/RBv8coHVCER8/farquiz-og-image-gATeER06XIVZOcb9C6ofEnunCbyop2.png?SgXi",
     "buttonTitle": "Start Quiz",
     "splashImageUrl": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/RBv8coHVCER8/farquiz-splash-image-Kls8WIXk9wQGcSNkuOOtrxfldtCwqg.png?wKcv",
-    "splashBackgroundColor": "#000000",
+    "splashBackgroundColor": "#6E45B9",
     "description": "Test your knowledge and compete with friends on the premier quiz platform",
     "tags": ["quiz", "education", "games", "social"],
-    "primaryCategory": "education"
+    "primaryCategory": "education",
+    
+    "subtitle": "The Ultimate Quiz Experience",
+    "tagline": "Test your knowledge with fun quizzes",
+    "ogTitle": "FarQuiz",
+    "ogDescription": "Test your knowledge and compete with friends on the premier quiz platform",
+    "ogImageUrl": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/RBv8coHVCER8/farquiz-og-image-gATeER06XIVZOcb9C6ofEnunCbyop2.png?SgXi",
+    "heroImageUrl": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/RBv8coHVCER8/farquiz-og-image-gATeER06XIVZOcb9C6ofEnunCbyop2.png?SgXi",
+    "screenshotUrls": [
+      "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/screenshots/farquiz-screenshot1.png",
+      "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/screenshots/farquiz-screenshot2.png",
+      "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/screenshots/farquiz-screenshot3.png"
+    ]
   }
 }

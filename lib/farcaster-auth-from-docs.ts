@@ -11,6 +11,21 @@ export type FarcasterUser = {
   pfpUrl: string | null
 }
 
+// Safely extract string value from potentially complex object
+function safeGetString(value: any): string | null {
+  if (value === null || value === undefined) return null
+  
+  // For strings, just return them
+  if (typeof value === 'string') return value
+  
+  // For numbers or booleans, convert to string
+  if (typeof value === 'number' || typeof value === 'boolean') 
+    return String(value)
+  
+  // For objects, don't try to convert them - just return null
+  return null
+}
+
 // Hook for Farcaster initialization and auth
 export function useFarcasterAuth() {
   const [isInitializing, setIsInitializing] = useState(true)
@@ -45,13 +60,13 @@ export function useFarcasterAuth() {
             // Try to get initial user info from context
             try {
               const userContext = sdk.context.user
-              if (userContext && userContext.fid) {
-                // Directly access properties without calling methods on them
+              if (userContext) {
+                // Safely extract primitive values
                 setUser({
-                  fid: userContext.fid,
-                  username: userContext.username || null,
-                  displayName: userContext.displayName || null,
-                  pfpUrl: userContext.pfpUrl || null
+                  fid: typeof userContext.fid === 'number' ? userContext.fid : null,
+                  username: safeGetString(userContext.username),
+                  displayName: safeGetString(userContext.displayName),
+                  pfpUrl: safeGetString(userContext.pfpUrl)
                 })
               }
             } catch (error) {
@@ -91,13 +106,12 @@ export function useFarcasterAuth() {
       // Get user info after sign-in
       try {
         const userContext = sdk.context.user
-        if (userContext && userContext.fid) {
-          // Directly access properties without calling methods on them
+        if (userContext) {
           const updatedUser = {
-            fid: userContext.fid,
-            username: userContext.username || null,
-            displayName: userContext.displayName || null,
-            pfpUrl: userContext.pfpUrl || null
+            fid: typeof userContext.fid === 'number' ? userContext.fid : null,
+            username: safeGetString(userContext.username),
+            displayName: safeGetString(userContext.displayName),
+            pfpUrl: safeGetString(userContext.pfpUrl)
           }
           
           setUser(updatedUser)

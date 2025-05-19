@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { SafeAvatar } from "@/components/safe-avatar" // Import our new component
 
 export function Header() {
   const { user, isAuthenticated, isInitializing, isInFarcaster, signIn, signOut } = useFarcasterAuth()
@@ -50,8 +51,24 @@ export function Header() {
     }
   }
 
-  // Safe fallback for avatar - just use a static character
-  const fallbackChar = user?.displayName ? "U" : "?"
+  // Safely get the display name
+  const getDisplayName = () => {
+    if (user?.displayName && typeof user.displayName === 'string') {
+      return user.displayName
+    }
+    if (user?.username && typeof user.username === 'string') {
+      return user.username
+    }
+    return "User"
+  }
+
+  // Safely get the username
+  const getUsername = () => {
+    if (user?.username && typeof user.username === 'string') {
+      return `@${user.username}`
+    }
+    return null
+  }
 
   return (
     <header className="bg-slate-800 border-b border-slate-700 py-3 px-4">
@@ -90,21 +107,13 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="rounded-full">
-                  <Avatar className="h-8 w-8">
-                    {user.pfpUrl ? (
-                      <AvatarImage src={user.pfpUrl} alt="Profile" />
-                    ) : (
-                      <AvatarFallback>
-                        {fallbackChar}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
+                  <SafeAvatar user={user} className="h-8 w-8" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>
-                  <p className="font-medium">{user.displayName || user.username || "User"}</p>
-                  {user.username && <p className="text-xs text-slate-400">@{user.username}</p>}
+                  <p className="font-medium">{getDisplayName()}</p>
+                  {getUsername() && <p className="text-xs text-slate-400">{getUsername()}</p>}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>

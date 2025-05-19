@@ -4,16 +4,43 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Home, Search, Trophy, Users, User, LogIn } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/contexts/auth-context"
+import { useFarcasterAuth } from "@/lib/farcaster-auth-from-docs"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 
 export function MobileNav() {
   const pathname = usePathname()
-  const { user, isAuthenticated, signIn, isInFarcaster } = useAuth()
+  const { user, isAuthenticated, isInitializing, isInFarcaster, signIn } = useFarcasterAuth()
+  const [autoSignInAttempted, setAutoSignInAttempted] = useState(false)
   
+  // Auto sign-in once when in Farcaster and on home page
+  useEffect(() => {
+    if (isInFarcaster && !isInitializing && !isAuthenticated && !autoSignInAttempted && pathname === '/') {
+      const attemptSignIn = async () => {
+        try {
+          console.log("Mobile nav auto-attempting sign-in...")
+          await signIn()
+        } catch (error) {
+          console.error("Mobile nav auto sign-in error:", error)
+        } finally {
+          setAutoSignInAttempted(true)
+        }
+      }
+      
+      // Add a delay to ensure everything is ready
+      const timer = setTimeout(attemptSignIn, 1500) // Slightly longer delay than header
+      return () => clearTimeout(timer)
+    }
+  }, [isInFarcaster, isInitializing, isAuthenticated, autoSignInAttempted, signIn, pathname])
+
+  // Manual sign-in handler
   const handleSignIn = async () => {
-    if (isInFarcaster) {
+    if (!isInFarcaster) return
+    
+    try {
       await signIn()
+    } catch (error) {
+      console.error("Mobile nav sign-in error:", error)
     }
   }
 
@@ -87,7 +114,9 @@ export function MobileNav() {
         ) : (
           <button
             onClick={handleSignIn}
-            className="inline-flex flex-col items-center justify-center px-5 hover:bg-slate-700"
+            className={cn(
+              "inline-flex flex-col items-center justify-center px-5 hover:bg-slate-700 w-full",
+            )}
           >
             <LogIn className="w-5 h-5" />
             <span className="text-xs mt-1">Sign In</span>
